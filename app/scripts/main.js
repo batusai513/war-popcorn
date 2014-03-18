@@ -1,51 +1,171 @@
+var App = App || {};
+$.observable(App);
 var BaseObject = {
 	extend: $.extend,
 	url: ''
 }
 
-var Movie = function(options){
-	$.observable(this);
-	this.isFavorite = false;
-	$.extend(true, this, options);
-}
+function request(url){
+	var deferred = $.Deferred();
 
-Movie.prototype.getYear = function(){
-	return new Date(this.release_date).getFullYear();
-}
+	$.ajax($.extend(true, App.config.ajaxConfig,
+		{
+			url: App.config.baseUrl + url
 
-Movie.prototype.toggleFavorite = function(){
-	this.isFavorite = !this.isFavorite;
-	this.trigger('change', this);
+		}
+	)).done(function(data){
+			deferred.resolve(data);
+	}).fail(function(){
+			deferred.resolve({})
+	});
+
+	return deferred.promise();
 }
 
 var MovieView = function(options){
 	var tmp,
-		$el = $(options.el),
-		el = $el[0];
-
+		$el = options.el || $('<div/>'),
+		model = options.model,
 		tmp = _.template($(options.tmp).html());
+
+	$el.addClass('col-xs-4 col-md-2')
+
 
 	function setModel(model){
 		this.tmpl = tmp(model);
+		this.$el.append(this.tmpl);
 	}
 
 	function getView(){
-		return this.tmpl;
+		return this.$el;
 	}
 
+	function addClickHandler(handler){
+      this.$el.on('click', handler.bind(this));
+  }
+
 	return {
+		$el: $el,
 		setModel: setModel,
-		getView: getView
+		getView: getView,
+		addClickHandler: addClickHandler,
+		model: model
 	}
 }
 
 var MoviePresenter = function(_view){
+	$.observable(this);
 	var view = _view,
-		model;
+			model,
+			_this = this;
 
 	function getView(){
-		console.log(view)
 		return view.getView();
+	}
+
+	function setModel(_model){
+		$.observable(this);
+		model = _model;
+		view.setModel(model);
+    view.addClickHandler(function(e){
+        e.preventDefault();
+        this.model.trigger('movie:single', view.model);
+    });
+	}
+
+	return {
+		getView: getView,
+		setModel: setModel,
+		model: view.model
+	}
+}
+
+var CollectionPresenter = function(_view, _collection){
+	var view = _view,
+			collection = _collection,
+			_this = this;
+
+	function events(){
+		var _this = this;
+		collection.on('collection:added', function(data){
+			$.each(data, function(i, el){
+				createItem.call(_this, el);
+			});
+		});
+	}
+
+	function createItem(model){
+		var movie = new MoviePresenter(new MovieView({tmp: "#movie-item", model: model}));
+		movie.setModel(model);
+		movie.model.on('movie:single', function(a){collection.trigger('movie:single', a)})
+		var tempView = movie.getView();
+		$(view).append($(tempView));
+	}
+
+	function init(){
+		$.observable(this);
+		events.call(this);
+		collection.fetch();
+	}
+	return{
+		init: init,
+		collection: collection
+	}
+}
+
+var ModalView = function(){
+	var tmp,
+		$el = options.el || $('<article/>'),
+		tmp = _.template($(options.tmp).html());
+
+	$el.addClass('white-box')
+
+
+	function setModel(model){
+		this.tmpl = tmp(model);
+		this.$el.append(this.tmpl);
+	}
+
+	function getView(){
+		return this.$el;
+	}
+
+	function openModal(){
+		$.magnificPopup.open({
+			type: 'inline',
+			items: {
+				src: this.$el
+			}
+		});
+	}
+
+	function closeModal(){
+		$.magnificPopup.close();
+	}
+
+	function addClickHandler(handler){
+      this.$el.on('click', handler.bind(this));
+  }
+
+	return {
+		$el: $el,
+		setModel: setModel,
+		getView: getView,
+		openModel: openModal
+	}
+}
+
+var ModalPresenter = function(_view){
+	$.observable(this);
+	var view = _view,
+			model;
+
+	function getView(){
+		return view.getView();
+	}
+
+	function openModal(){
+		view.openModal();
 	}
 
 	function setModel(_model){
@@ -53,73 +173,20 @@ var MoviePresenter = function(_view){
 		view.setModel(model);
 	}
 
-
 	return {
 		getView: getView,
-		setModel: setModel
+		setModel: setModel,
+		openModal: openModal
 	}
 }
 
-var Collection = function(options){
-	this.movies = [];
-	this.type = options.type || '';
-	this.url = options.url;
-	$.observable(this);
+var AppMediator = function(_modalPresenter){
+	modalPresenter = _modalPresenter;
 }
-
-Collection.prototype.fetch = function(){
-	var _this = this,
-			data = request(this.url);
-	data.done(function(data){
-		_this.movies = [];
-		$.each(_this.parse(data), function(i, el){
-			_this.movies.push(new Movie(el))
-		})
-		_this.trigger('collection:added', _this.movies);
-	});
-}
-
-Collection.prototype.parse = function(data){
-	return data.results;
-}
-
-Collection.prototype.getCollection = function(){
-	return this.movies;
-}
-
-var CollectionPresenter = function(_view, _collection){
-	var view = _view,
-	collection = _collection;
-
-	function events(){
-		collection.on('collection:added', function(data){
-			$.each(data, function(i, el){
-				createItem(el);
-			});
-		});
-	}
-
-	function createItem(model){
-		var movie = new MoviePresenter(new MovieView({tmp: "#movie-item"}));
-		movie.setModel(model);
-		$(view).append(movie.getView())
-	}
-
-	function init(){
-		collection.fetch();
-	}
-	events();
-	return{
-		init: init
-	}
-}
-
-
-var App = App || {};
 
 App.config = (function(){
 	var APIKEY = '2c78ff3d64b6f6e489fc3faf1edd3a64',
-		BASEURL = 'https://api.themoviedb.org/3/'
+			BASEURL = 'https://api.themoviedb.org/3/'
 
 	return{
 		apiKey: APIKEY,
@@ -131,35 +198,30 @@ App.config = (function(){
 			data: {api_key: APIKEY}
 		}
 	}
+
 }).call(this);
 
-
-function request(url){
-	var deferred = $.Deferred();
-
-	$.ajax($.extend(true, App.config.ajaxConfig,
-		{
-			url: App.config.baseUrl + url
-
-		}
-	)).
-		done(function(data){
-			console.log(data)
-			deferred.resolve(data);
-	}).
-		fail(function(){
-			deferred.resolve({})
-	});
-
-	return deferred.promise();
-}
 
 var c1 = new Collection({
 	url: 'movie/popular',
 	type: 'popular'
 })
 var popular = new CollectionPresenter("#popular", c1)
-popular.init()
+popular.init();
+
+c1.on('movie:single', function(a){
+	console.log(a);
+	a.fetch();
+	a.on('model:fetch', function(a){
+	var tmlp = _.template($('#movie-popup').html())(a);
+	$.magnificPopup.open({
+		type: 'inline',
+		items: {
+			src: tmlp
+		}
+	});
+	})
+})
 
 var c2 = new Collection({
 	url: 'movie/upcoming',

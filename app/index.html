@@ -79,11 +79,9 @@
         <!-- endbuild -->
 
         <script type="text/template" id="movie-item">
-            <div class="col-xs-4 col-md-2">
                 <a href="#" class="thumbnail" id="<%=id%>">
                     <img src="http://image.tmdb.org/t/p/w300<%= poster_path%>" alt="">
                 </a>
-            </div>
         </script>
         <script type="text/template" id="movie-popup">
             <article class="white-box">
@@ -117,6 +115,8 @@
 
         <!-- build:js scripts/main.js -->
         <script src="scripts/observable.js"></script>
+        <script src="scripts/movie.js"></script>
+        <script src="scripts/collection.js"></script>
         <script src="scripts/main.js"></script>
         <!-- endbuild -->
 </body>
