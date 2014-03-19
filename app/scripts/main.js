@@ -67,8 +67,8 @@ function request(url){
 			var model = this;
 			request.done(function(data){
 				$.extend(model, data)
-				model.trigger('fetch');
-			});
+				model.trigger('fetch', [this]);
+			}.bind(this));
 			return this;
 		},
 
@@ -142,6 +142,10 @@ function request(url){
 
 		render: function(){
 			return this;
+		},
+
+		$: function(el){
+			return this.$el.find(el);
 		},
 
 		addEl: function(el){

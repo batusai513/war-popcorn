@@ -1,7 +1,6 @@
 var Movi = App.Model.mixin({
 	url: 'movie/',
 	init: function(){
-		console.log(this);
 	},
 	isFavorite: false,
 	getYear: function(){
@@ -9,7 +8,7 @@ var Movi = App.Model.mixin({
 	},
 	toggleFavorite: function(){
 		this.isFavorite = !this.isFavorite;
-		this.trigger('change/isFavorite', this);
+		$(this).trigger('change/isFavorite', this);
 		return this;
 	}
 });
@@ -21,7 +20,6 @@ var Col = App.Collections.mixin({
 		return data.results;
 	},
 	init: function(){
-		console.log(this);
 	}
 });
 
@@ -29,16 +27,28 @@ var SingleView = App.Presenter.mixin({
 	className: 'white-box panel',
 	init: function(){
 		this.template = _.template($('#movie-popup').html());
-		this.model.on('change/isFavorite', this.render.bind(this));
+		$(this.model).on('change/isFavorite', this.render.bind(this));
 	},
 
 	render: function(){
+		console.log('test');
+		this.$el.remove();
+		$.magnificPopup.close();
 		var template = this.template(this.model),
-				html = this.$el.html(template),
+				html = this.$el.html(template)
+				_this = this,
 				config = {
 					type: 'inline',
 					items: {
 						src: html
+					},
+					callbacks:{
+						open: function(){
+							this.content.find('.fav').on('click', function(e){
+								e.preventDefault();
+								_this.model.toggleFavorite();
+							})
+						}
 					}
 				};
 		$.magnificPopup.open(config);
@@ -53,7 +63,11 @@ var Vie = App.Presenter.mixin({
 	},
 	click: function(e){
 		e.preventDefault();
-		console.log(this.model)
+		this.model.fetch()
+		this.model.on('fetch', function(model){
+			new SingleView({model: model}).render();
+		}.bind(this))
+		this.trigger('model/selected', [this.model]);
 	},
 	init: function(){
 		this.model.on('fetch', function(){
@@ -74,7 +88,6 @@ var CollectionView = App.Presenter.mixin({
 	},
 	addOne: function(model){
 		var view = new Vie({model: model});
-		console.log(view)
 		this.$el.append(view.render().$el);
 	},
 	addAll: function(collection){
@@ -82,7 +95,6 @@ var CollectionView = App.Presenter.mixin({
 		$.each(this.collection.models, function(i, model){
 			_this.addOne(model);
 		});
-		console.log(this.$el)
 	}
 });
 
