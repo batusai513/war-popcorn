@@ -120,7 +120,7 @@ function request(url){
 
 
 
-	var View = App.View = function(options){
+	var Presenter = App.Presenter = function(options){
 		var options = options || {};
 		this.options = options;
 		if(options.model){
@@ -136,7 +136,7 @@ function request(url){
 		this.addEvents();
 	}
 
-	$.extend(true, View.prototype, Events, {
+	$.extend(true, Presenter.prototype, Events, {
 
 		init: function(){},
 
@@ -200,7 +200,7 @@ function request(url){
 
 	    return child;
 	  };
-	  Model.mixin = View.mixin = Collections.mixin = mixin;
+	  Model.mixin = Presenter.mixin = Collections.mixin = mixin;
 
 App.config = (function(){
 	var APIKEY = '2c78ff3d64b6f6e489fc3faf1edd3a64',

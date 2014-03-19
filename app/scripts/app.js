@@ -25,7 +25,7 @@ var Col = App.Collections.mixin({
 	}
 });
 
-var SingleView = App.View.mixin({
+var SingleView = App.Presenter.mixin({
 	className: 'white-box panel',
 	init: function(){
 		this.template = _.template($('#movie-popup').html());
@@ -45,7 +45,7 @@ var SingleView = App.View.mixin({
 	}
 });
 
-var Vie = App.View.mixin({
+var Vie = App.Presenter.mixin({
 	template: _.template($('#movie-item').html()),
 	className: 'col-xs-4 col-md-2',
 	events: {
@@ -68,14 +68,14 @@ var Vie = App.View.mixin({
 
 var col = new Col();
 
-var CollectionView = App.View.mixin({
+var CollectionView = App.Presenter.mixin({
 	init: function(){
 		this.collection.on('collection/add', this.addAll.bind(this));
 	},
 	addOne: function(model){
 		var view = new Vie({model: model});
 		console.log(view)
-		this.$el.append(view.render().$el)
+		this.$el.append(view.render().$el);
 	},
 	addAll: function(collection){
 		var _this = this;
