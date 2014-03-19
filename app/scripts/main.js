@@ -1,9 +1,12 @@
-var App = App || {};
-$.observable(App);
-var BaseObject = {
-	extend: $.extend,
-	url: ''
-}
+var App = App || {},
+	BaseObject = {
+	extend: $.extend
+};
+
+
+
+$.extend(App, Events);
+$.extend(true, App, BaseObject);
 
 function request(url){
 	var deferred = $.Deferred();
@@ -22,167 +25,151 @@ function request(url){
 	return deferred.promise();
 }
 
-var MovieView = function(options){
-	var tmp,
-		$el = options.el || $('<div/>'),
-		model = options.model,
-		tmp = _.template($(options.tmp).html());
 
-	$el.addClass('col-xs-4 col-md-2')
+(function(App, jQuery, request, events){
 
+	App.config = (function(){
+		var APIKEY = '2c78ff3d64b6f6e489fc3faf1edd3a64',
+				BASEURL = 'https://api.themoviedb.org/3/'
 
-	function setModel(model){
-		this.tmpl = tmp(model);
-		this.$el.append(this.tmpl);
-	}
-
-	function getView(){
-		return this.$el;
-	}
-
-	function addClickHandler(handler){
-      this.$el.on('click', handler.bind(this));
-  }
-
-	return {
-		$el: $el,
-		setModel: setModel,
-		getView: getView,
-		addClickHandler: addClickHandler,
-		model: model
-	}
-}
-
-var MoviePresenter = function(_view){
-	$.observable(this);
-	var view = _view,
-			model,
-			_this = this;
-
-	function getView(){
-		return view.getView();
-	}
-
-	function setModel(_model){
-		$.observable(this);
-		model = _model;
-		view.setModel(model);
-    view.addClickHandler(function(e){
-        e.preventDefault();
-        this.model.trigger('movie:single', view.model);
-    });
-	}
-
-	return {
-		getView: getView,
-		setModel: setModel,
-		model: view.model
-	}
-}
-
-var CollectionPresenter = function(_view, _collection){
-	var view = _view,
-			collection = _collection,
-			_this = this;
-
-	function events(){
-		var _this = this;
-		collection.on('collection:added', function(data){
-			$.each(data, function(i, el){
-				createItem.call(_this, el);
-			});
-		});
-	}
-
-	function createItem(model){
-		var movie = new MoviePresenter(new MovieView({tmp: "#movie-item", model: model}));
-		movie.setModel(model);
-		movie.model.on('movie:single', function(a){collection.trigger('movie:single', a)})
-		var tempView = movie.getView();
-		$(view).append($(tempView));
-	}
-
-	function init(){
-		$.observable(this);
-		events.call(this);
-		collection.fetch();
-	}
-	return{
-		init: init,
-		collection: collection
-	}
-}
-
-var ModalView = function(){
-	var tmp,
-		$el = options.el || $('<article/>'),
-		tmp = _.template($(options.tmp).html());
-
-	$el.addClass('white-box')
-
-
-	function setModel(model){
-		this.tmpl = tmp(model);
-		this.$el.append(this.tmpl);
-	}
-
-	function getView(){
-		return this.$el;
-	}
-
-	function openModal(){
-		$.magnificPopup.open({
-			type: 'inline',
-			items: {
-				src: this.$el
+		return{
+			apiKey: APIKEY,
+			baseUrl: BASEURL,
+			ajaxConfig: {
+				url: BASEURL,
+				type: 'GET',
+				crossDomain: true,
+				data: {api_key: APIKEY}
 			}
-		});
+		}
+
+	}).call(this);
+
+	App.request = request;
+
+	var Model = App.Model = function(options){
+		var options = options || {};
+		this.init.apply(this, arguments);
 	}
 
-	function closeModal(){
-		$.magnificPopup.close();
+	$.extend(true, Model.prototype, Events, {
+		fetch: function(options){
+			var options = options || {};
+			var url = this.url + this.id + (options.others || '');
+			var request = App.request(url);
+			var model = this;
+			request.done(function(data){
+				$.extend(model, data)
+				model.trigger('fetch');
+			});
+			return this;
+		},
+
+		parse: function(data){
+			return data;
+		},
+
+		init: function(){},
+	});
+
+	var Collection = App.Collection = function(models, options){
+		var options = options || {};
+		this.options = options || {};
+		if(options.model){
+			this.model = options.model;
+		}
+		this.initialize.bind(this)
 	}
 
-	function addClickHandler(handler){
-      this.$el.on('click', handler.bind(this));
-  }
+	$.extend(true, Collection.prototype, Events, {
+		initialize: function(){},
+		model: Model
+	})
 
-	return {
-		$el: $el,
-		setModel: setModel,
-		getView: getView,
-		openModel: openModal
-	}
-}
 
-var ModalPresenter = function(_view){
-	$.observable(this);
-	var view = _view,
-			model;
 
-	function getView(){
-		return view.getView();
-	}
 
-	function openModal(){
-		view.openModal();
-	}
-
-	function setModel(_model){
-		model = _model;
-		view.setModel(model);
+	var View = App.View = function(options){
+		var options = options || {};
+		this.options = options;
+		if(options.model){
+			this.model = options.model;
+			}else{
+				if(options.collection){
+					this.collection = options.collection;
+				}
+			}
+		this.el = options.el || null;
+		this.createEl();
+		this.init.apply(this, arguments);
+		this.addEvents();
 	}
 
-	return {
-		getView: getView,
-		setModel: setModel,
-		openModal: openModal
-	}
-}
+	$.extend(true, View.prototype, Events, {
+		
+		init: function(){},
 
-var AppMediator = function(_modalPresenter){
-	modalPresenter = _modalPresenter;
-}
+		render: function(){
+			return this;
+		},
+
+		addEl: function(el){
+			if(el instanceof jQuery){
+				this.$el = el;
+				this.el = this.$el[0];
+			}else{
+				this.$el = $(el)
+			}
+			return this;
+		},
+
+		createEl: function(){
+			if(!this.el){
+				var attrs = {};
+				var tagName = this.tagName || this.options.tagName || 'div';
+				attrs['id'] = this.id;
+				attrs['class'] = this.className;
+				var $el = $('<' + tagName + '>').attr(attrs);
+				this.addEl($el);
+			}else{
+				this.addEl(this.el);
+			}
+		},
+
+		addEvents: function(){
+			var events = this.events;
+			var method = $.noop(),
+				eventName = '';
+			for(key in events){
+				if(events.hasOwnProperty(key)){
+					eventName = key;
+					method = events[key];
+					this.$el.on(eventName, this[method].bind(this))
+				}
+			}
+		}
+
+	});
+
+	  var mixin = function(protoProps, staticProps) {
+	    var parent = this;
+	    var child;
+
+	    if (protoProps && _.has(protoProps, 'constructor')) {
+	      child = protoProps.constructor;
+	    } else {
+	      child = function(){ return parent.apply(this, arguments); };
+	    }
+	    $.extend(true, child, parent, staticProps);
+	    var Surrogate = function(){ this.constructor = child; };
+	    Surrogate.prototype = parent.prototype;
+	    child.prototype = new Surrogate;
+	    if (protoProps) $.extend(true, child.prototype, protoProps);
+	    child.__super__ = parent.prototype;
+
+	    return child;
+	  };
+	  Model.mixin = View.mixin = mixin;
 
 App.config = (function(){
 	var APIKEY = '2c78ff3d64b6f6e489fc3faf1edd3a64',
@@ -209,10 +196,10 @@ var c1 = new Collection({
 var popular = new CollectionPresenter("#popular", c1)
 popular.init();
 
-c1.on('movie:single', function(a){
+c1.on('movies/single', function(a){
 	console.log(a);
 	a.fetch();
-	a.on('model:fetch', function(a){
+	a.on('model/fetch', function(a){
 	var tmlp = _.template($('#movie-popup').html())(a);
 	$.magnificPopup.open({
 		type: 'inline',
@@ -229,4 +216,7 @@ var c2 = new Collection({
 })
 var latest = new CollectionPresenter("#latest", c2)
 latest.init()
+
+}(App, jQuery, request, Events));
+
 
