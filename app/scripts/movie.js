@@ -1,5 +1,4 @@
 var Movie = function(options){
-  
   this.url =  'movie/',
   this.isFavorite = false;
   $.extend(true, this, options);

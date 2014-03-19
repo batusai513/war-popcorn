@@ -1,80 +1,99 @@
 var Movi = App.Model.mixin({
 	url: 'movie/',
 	init: function(){
-		this.fetch();
+		console.log(this);
 	},
-	id: 550,
 	isFavorite: false,
+	getYear: function(){
+		return new Date(this.release_date).getFullYear();
+	},
 	toggleFavorite: function(){
-		return this.isFavorite = !this.isFavorite;
+		this.isFavorite = !this.isFavorite;
+		this.trigger('change/isFavorite', this);
+		return this;
 	}
 });
 
-var m = new Movi();
+var Col = App.Collections.mixin({
+	model: Movi,
+	url: 'movie/popular',
+	parse: function(data){
+		return data.results;
+	},
+	init: function(){
+		console.log(this);
+	}
+});
+
+var SingleView = App.View.mixin({
+	className: 'white-box panel',
+	init: function(){
+		this.template = _.template($('#movie-popup').html());
+		this.model.on('change/isFavorite', this.render.bind(this));
+	},
+
+	render: function(){
+		var template = this.template(this.model),
+				html = this.$el.html(template),
+				config = {
+					type: 'inline',
+					items: {
+						src: html
+					}
+				};
+		$.magnificPopup.open(config);
+	}
+});
 
 var Vie = App.View.mixin({
 	template: _.template($('#movie-item').html()),
 	className: 'col-xs-4 col-md-2',
-	tagName: "li",
 	events: {
 		'click': 'click'
 	},
 	click: function(e){
 		e.preventDefault();
-		console.log(this)
-	},
-	init: function(){
-		this.model.on('fetch', function(){
-			this.render().$el.appendTo('body')
-		}.bind(this))
-	},
-	render: function(){
-		this.$el.append(this.template(this.model));
-		return this;
-	}
-});
-
-var v = new Vie({
-	model: m
-})
-
-var Movi2 = App.Model.mixin({
-	url: 'movie/',
-	init: function(){
-		this.fetch();
-	},
-	id: 551,
-	isFavorite: false,
-	toggleFavorite: function(){
-		return this.isFavorite = !this.isFavorite;
-	}
-});
-
-var m2 = new Movi2();
-
-var Vie2 = App.View.mixin({
-	template: _.template($('#movie-item').html()),
-	className: 'col-xs-4 col-md-2',
-	tagName: "li",
-	events: {
-		'click': 'click'
-	},
-	click: function(e){
-		e.preventDefault();
-		console.log(this)
-	},
-	init: function(){
-		this.model.on('fetch', function(){
-			this.render().$el.appendTo('body')
-		}.bind(this))
-	},
-	render: function(){
 		console.log(this.model)
+	},
+	init: function(){
+		this.model.on('fetch', function(){
+
+		}.bind(this))
+	},
+	render: function(){
 		this.$el.append(this.template(this.model));
 		return this;
 	}
 });
 
-var v2 = new Vie2({
-	model: m2
-})
+var col = new Col();
+
+var CollectionView = App.View.mixin({
+	init: function(){
+		this.collection.on('collection/add', this.addAll.bind(this));
+	},
+	addOne: function(model){
+		var view = new Vie({model: model});
+		console.log(view)
+		this.$el.append(view.render().$el)
+	},
+	addAll: function(collection){
+		var _this = this;
+		$.each(this.collection.models, function(i, model){
+			_this.addOne(model);
+		});
+		console.log(this.$el)
+	}
+});
+
+var cv = new CollectionView({
+	el: "#popular",
+	collection: col
+});
+
+var cv2 = new CollectionView({
+	el: "#latest",
+	collection: col
+});
+
+cv.collection.fetch()

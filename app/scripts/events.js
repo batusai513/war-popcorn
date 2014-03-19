@@ -15,7 +15,6 @@ var Events = (function (){
                                 if (cache[topic]) {
                                         var thisTopic = cache[topic],
                                                 i = thisTopic.length - 1;
-                                                console.log(thisTopic)
 
                                         for (i; i >= 0; i -= 1) {
                                                 thisTopic[i].apply( scope || this, args || []);
@@ -37,7 +36,6 @@ var Events = (function (){
                                         cache[topic] = [];
                                 }
                                 cache[topic].push(callback);
-                                console.log(cache)
                                 return [topic, callback];
                         },
                         /**

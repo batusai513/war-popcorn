@@ -17,6 +17,12 @@
         <script src="bower_components/modernizr/modernizr.js"></script>
         <!-- endbuild -->
 
+        <style>
+            .panel{
+                overflow: hidden;
+            }
+        </style>
+
     </head>
     <body>
         <!--[if lt IE 10]>
@@ -84,12 +90,12 @@
                 </a>
         </script>
         <script type="text/template" id="movie-popup">
-            <article class="white-box">
+            <article class="white-box panel">
                 <div class="media">
                   <a class="pull-left" href="#">
                     <img src="http://image.tmdb.org/t/p/w300<%= poster_path%>" alt="">
                   </a>
-                  <div class="media-body">
+                  <div class="media-body panel-body">
                     <h4 class="media-heading"><%= original_title %> <span>(<%= getYear() %>)</span></h4>
                     <h5>Overview</h5>
                     <p>

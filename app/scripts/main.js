@@ -47,12 +47,19 @@ function request(url){
 
 	App.request = request;
 
-	var Model = App.Model = function(options){
+	var Model = App.Model = function(attributes, options){
 		var options = options || {};
+		if(attributes){
+			$.extend(this, attributes)
+		}
+		if(attributes === null && attributes['id']){
+			this.id = attributes['id'];
+		}
 		this.init.apply(this, arguments);
 	}
 
 	$.extend(true, Model.prototype, Events, {
+
 		fetch: function(options){
 			var options = options || {};
 			var url = this.url + this.id + (options.others || '');
@@ -72,19 +79,43 @@ function request(url){
 		init: function(){},
 	});
 
-	var Collection = App.Collection = function(models, options){
+	var Collections = App.Collections = function(models, options){
 		var options = options || {};
 		this.options = options || {};
-		if(options.model){
-			this.model = options.model;
+		this.models = [];
+		if(models){
+			this.createModels(models);
 		}
-		this.initialize.bind(this)
+		this.init.apply(this, arguments);
 	}
 
-	$.extend(true, Collection.prototype, Events, {
-		initialize: function(){},
-		model: Model
-	})
+	$.extend(true, Collections.prototype, Events, {
+		init: function(){},
+
+		fetch: function(){
+			var url = this.url,
+					request = App.request(url),
+					models = [];
+			request.done(function(data){
+				models = this.parse(data);
+				this.createModels(models);
+			}.bind(this));
+		},
+
+		parse: function(data){
+			return data;
+		},
+
+		createModels: function(models){
+			var newModel = $.noop();
+			this.models = [];
+			$.each(models, function(i, model){
+				newModel = new this.model(model);
+				this.models.push(newModel);
+			}.bind(this));
+			this.trigger('collection/add', [this.models]);
+		}
+	});
 
 
 
@@ -106,7 +137,7 @@ function request(url){
 	}
 
 	$.extend(true, View.prototype, Events, {
-		
+
 		init: function(){},
 
 		render: function(){
@@ -144,7 +175,7 @@ function request(url){
 				if(events.hasOwnProperty(key)){
 					eventName = key;
 					method = events[key];
-					this.$el.on(eventName, this[method].bind(this))
+					this.$el.on(eventName, this[method].bind(this));
 				}
 			}
 		}
@@ -169,7 +200,7 @@ function request(url){
 
 	    return child;
 	  };
-	  Model.mixin = View.mixin = mixin;
+	  Model.mixin = View.mixin = Collections.mixin = mixin;
 
 App.config = (function(){
 	var APIKEY = '2c78ff3d64b6f6e489fc3faf1edd3a64',
@@ -189,33 +220,32 @@ App.config = (function(){
 }).call(this);
 
 
-var c1 = new Collection({
-	url: 'movie/popular',
-	type: 'popular'
-})
-var popular = new CollectionPresenter("#popular", c1)
-popular.init();
+// var c1 = new Collection({
+// 	url: 'movie/popular',
+// 	type: 'popular'
+// })
+// var popular = new CollectionPresenter("#popular", c1)
+// popular.init();
 
-c1.on('movies/single', function(a){
-	console.log(a);
-	a.fetch();
-	a.on('model/fetch', function(a){
-	var tmlp = _.template($('#movie-popup').html())(a);
-	$.magnificPopup.open({
-		type: 'inline',
-		items: {
-			src: tmlp
-		}
-	});
-	})
-})
+// c1.on('movies/single', function(a){
+// 	a.fetch();
+// 	a.on('model/fetch', function(a){
+// 	var tmlp = _.template($('#movie-popup').html())(a);
+// 	$.magnificPopup.open({
+// 		type: 'inline',
+// 		items: {
+// 			src: tmlp
+// 		}
+// 	});
+// 	})
+// })
 
-var c2 = new Collection({
-	url: 'movie/upcoming',
-	type: 'popular'
-})
-var latest = new CollectionPresenter("#latest", c2)
-latest.init()
+// var c2 = new Collection({
+// 	url: 'movie/upcoming',
+// 	type: 'popular'
+// })
+// var latest = new CollectionPresenter("#latest", c2)
+// latest.init()
 
 }(App, jQuery, request, Events));
 
