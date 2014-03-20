@@ -1,10 +1,14 @@
 How to run
 ==========
 
-clone the repo
+*if not instaled
+  *install node js
+  *install gulp and bower (npm install -g gulp, npm install -g bower)
+  
+*clone the repo
 
-run npm install
+*run npm install
 
-run bower install
+*run bower install
 
-run gulp watch
+*run gulp watch
