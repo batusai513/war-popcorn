@@ -1,111 +1,220 @@
-var Movi = App.Model.mixin({
-	url: 'movie/',
-	init: function(){
-	},
-	isFavorite: false,
-	getYear: function(){
-		return new Date(this.release_date).getFullYear();
-	},
-	toggleFavorite: function(){
-		this.isFavorite = !this.isFavorite;
-		$(this).trigger('change/isFavorite', this);
-		return this;
-	}
-});
+var App = App || {}
+App.models = {},
+App.collections = {},
+App.views = {};
 
-var Col = App.Collections.mixin({
-	model: Movi,
-	url: 'movie/popular',
-	parse: function(data){
-		return data.results;
-	},
-	init: function(){
-	}
-});
+$.observable(App);
 
-var SingleView = App.Presenter.mixin({
-	className: 'white-box panel',
-	init: function(){
-		this.template = _.template($('#movie-popup').html());
-		$(this.model).on('change/isFavorite', this.render.bind(this));
-	},
 
-	render: function(){
-		console.log('test');
-		this.$el.remove();
-		$.magnificPopup.close();
-		var template = this.template(this.model),
-				html = this.$el.html(template)
-				_this = this,
-				config = {
-					type: 'inline',
-					items: {
-						src: html
-					},
-					callbacks:{
-						open: function(){
-							this.content.find('.fav').on('click', function(e){
-								e.preventDefault();
-								_this.model.toggleFavorite();
-							})
-						}
-					}
-				};
-		$.magnificPopup.open(config);
-	}
-});
+(function(App, $){
 
-var Vie = App.Presenter.mixin({
-	template: _.template($('#movie-item').html()),
-	className: 'col-xs-4 col-md-2',
-	events: {
-		'click': 'click'
-	},
-	click: function(e){
-		e.preventDefault();
-		this.model.fetch()
-		this.model.on('fetch', function(model){
-			new SingleView({model: model}).render();
-		}.bind(this))
-		this.trigger('model/selected', [this.model]);
-	},
-	init: function(){
-		this.model.on('fetch', function(){
+	App.config = (function(){
+		var APIKEY = '2c78ff3d64b6f6e489fc3faf1edd3a64',
+				BASEURL = 'https://api.themoviedb.org/3/'
 
-		}.bind(this))
-	},
-	render: function(){
-		this.$el.append(this.template(this.model));
-		return this;
-	}
-});
+		return{
+			apiKey: APIKEY,
+			baseUrl: BASEURL,
+			ajaxConfig: {
+				url: BASEURL,
+				type: 'GET',
+				crossDomain: true,
+				data: {api_key: APIKEY}
+			}
+		}
 
-var col = new Col();
+	}).call(this);
 
-var CollectionView = App.Presenter.mixin({
-	init: function(){
-		this.collection.on('collection/add', this.addAll.bind(this));
-	},
-	addOne: function(model){
-		var view = new Vie({model: model});
-		this.$el.append(view.render().$el);
-	},
-	addAll: function(collection){
-		var _this = this;
-		$.each(this.collection.models, function(i, model){
-			_this.addOne(model);
+	function request(url){
+		var deferred = $.Deferred();
+
+		$.ajax($.extend(true, App.config.ajaxConfig,
+			{
+				url: App.config.baseUrl + url
+
+			}
+		)).done(function(data){
+				deferred.resolve(data);
+		}).fail(function(){
+				deferred.resolve({})
 		});
+
+		return deferred.promise();
 	}
-});
 
-var cv = new CollectionView({
-	el: "#popular",
-	collection: col
-});
+	App.request = request;
 
-var cv2 = new CollectionView({
-	el: "#latest",
-	collection: col
-});
+	var Model = App.Model = function(attributes, options){
+		$.observable(this);
+		var options = options || {};
+		if(attributes){
+			$.extend(this, attributes)
+		}
+		if(attributes === null && attributes['id']){
+			this.id = attributes['id'];
+		}
+		this.init.apply(this, arguments);
+	}
 
-cv.collection.fetch()
+	$.extend(true, Model.prototype, {
+
+		fetch: function(options){
+			var options = options || {};
+			var url = this.url + this.id + (options.others || '');
+			var request = App.request(url);
+			var model = this;
+			request.done(function(data){
+				$.extend(model, data)
+				model.trigger('fetch', this);
+			}.bind(this));
+			return this;
+		},
+
+		parse: function(data){
+			return data;
+		},
+
+		init: function(){},
+	});
+
+	var Collections = App.Collections = function(models, options){
+		$.observable(this);
+		var options = options || {};
+		this.options = options || {};
+		this.models = [];
+		if(options.url) this.url = options.url;
+		if(models){
+			this.createModels(models);
+		}
+		this.init.apply(this, arguments);
+	}
+
+	$.extend(true, Collections.prototype, {
+
+		init: function(){},
+
+		fetch: function(){
+			var url = this.url,
+					request = App.request(url),
+					models = [];
+			request.done(function(data){
+				models = this.parse(data);
+				this.createModels(models);
+			}.bind(this));
+		},
+
+		parse: function(data){
+			return data;
+		},
+
+		createModels: function(models){
+			var newModel = $.noop();
+			this.models = [];
+			$.each(models, function(i, model){
+				newModel = new this.model(model);
+				this.models.push(newModel);
+			}.bind(this));
+			this.trigger('collection:update', this.models);
+		}
+	});
+
+
+
+
+	var Presenter = App.Presenter = function(options){
+		$.observable(this)
+		this.cid = _.uniqueId('vw');
+		var options = options || {};
+		this.options = options;
+		if(options.model){
+			this.model = options.model;
+			}else{
+				if(options.collection){
+					this.collection = options.collection;
+				}
+			}
+		this.el = options.el || null;
+		this._createEl();
+		this.init.apply(this, arguments);
+		this.addEvents();
+	}
+
+	$.extend(true, Presenter.prototype, {
+
+		init: function(){},
+
+		render: function(){
+			return this;
+		},
+
+		$: function(el){
+			return this.$el.find(el);
+		},
+
+		addEl: function(el, add){
+			if (this.$el) this.removeEvents();
+			if(el instanceof jQuery){
+				this.$el = el;
+				this.el = this.$el[0];
+			}else{
+				this.$el = $(el)
+			}
+			if (add !== false) this.addEvents();
+			return this;
+		},
+
+		_createEl: function(){
+			if(!this.el){
+				var attrs = {};
+				var tagName = this.tagName || this.options.tagName || 'div';
+				attrs['id'] = this.id;
+				attrs['class'] = this.className;
+				var $el = $('<' + tagName + '>').attr(attrs);
+				this.addEl($el, false);
+			}else{
+				this.addEl(this.el, false);
+			}
+		},
+
+		removeEvents: function(){
+			this.$el.off('.remEvents' + this.cid);
+			return this;
+		},
+
+		addEvents: function(){
+			var events = this.events;
+			var method = $.noop(),
+				eventName = '';
+			this.removeEvents();
+			for(key in events){
+				if(events.hasOwnProperty(key)){
+					eventName += key + '.remEvents' + this.cid;
+					method = events[key];
+					this.$el.on(eventName, this[method].bind(this));
+				}
+			}
+		}
+
+	});
+
+	  var mixin = function(protoProps, staticProps) {
+	    var parent = this;
+	    var child;
+
+	    if (protoProps && _.has(protoProps, 'constructor')) {
+	      child = protoProps.constructor;
+	    } else {
+	      child = function(){ return parent.apply(this, arguments); };
+	    }
+	    $.extend(true, child, parent, staticProps);
+	    var Surrogate = function(){ this.constructor = child; };
+	    Surrogate.prototype = parent.prototype;
+	    child.prototype = new Surrogate;
+	    if (protoProps) $.extend(true, child.prototype, protoProps);
+	    child.__super__ = parent.prototype;
+
+	    return child;
+	  };
+	  Model.mixin = Presenter.mixin = Collections.mixin = mixin;
+
+}(App, jQuery));

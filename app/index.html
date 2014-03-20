@@ -21,6 +21,10 @@
             .panel{
                 overflow: hidden;
             }
+            .thumbnail{
+                overflow: hidden;
+                height: 240px;
+            }
         </style>
 
     </head>
@@ -102,7 +106,13 @@
                         <%= overview %>
                     </p>
                     <h5>Cast</h5>
-                    <a href="#" class="btn btn-link">Cancel</a>
+                    <% if(cast !== undefined){ %>
+                    <% _.each(cast, function(ct, i){ %>
+                        <% if(i < 3){ %>
+                        <div> <b><%=ct.name + ' - '%> </b><%=ct.character %></div>
+                        <% } %>
+                    <% }); %>
+                    <% } %>
                     <% if(!isFavorite){ %>
                     <a href="#" class="btn btn-primary fav">
                         <span class="glyphicon glyphicon-star"></span>
@@ -120,12 +130,10 @@
         </script>
 
         <!-- build:js scripts/main.js -->
-        <script src="scripts/events.js"></script>
+        
         <script src="scripts/observable.js"></script>
-        <script src="scripts/movie.js"></script>
-        <script src="scripts/collection.js"></script>
-        <script src="scripts/main.js"></script>
         <script src="scripts/app.js"></script>
+        <script src="scripts/main.js"></script>
         <!-- endbuild -->
 </body>
 </html>
