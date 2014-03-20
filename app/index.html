@@ -106,31 +106,24 @@
                         <%= overview %>
                     </p>
                     <h5>Cast</h5>
-                    <% if(cast !== undefined){ %>
+
                     <% _.each(cast, function(ct, i){ %>
                         <% if(i < 3){ %>
                         <div> <b><%=ct.name + ' - '%> </b><%=ct.character %></div>
                         <% } %>
                     <% }); %>
-                    <% } %>
-                    <% if(!isFavorite){ %>
-                    <a href="#" class="btn btn-primary fav">
+
+                    <a href="#" class="btn fav <%= !isFavorite ? 'btn-primary' : 'btn-danger' %>">
                         <span class="glyphicon glyphicon-star"></span>
                         Add to Favorites
                     </a>
-                    <% } else { %>
-                    <a href="#" class="btn btn-danger fav">
-                        <span class="glyphicon glyphicon-star"></span>
-                        Remove from Favorites
-                    </a>
-                    <% } %>
                   </div>
                 </div>
             </article>
         </script>
 
         <!-- build:js scripts/main.js -->
-        
+
         <script src="scripts/observable.js"></script>
         <script src="scripts/app.js"></script>
         <script src="scripts/main.js"></script>

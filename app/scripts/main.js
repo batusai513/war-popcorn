@@ -1,5 +1,7 @@
 App.models.Movie = App.Model.mixin({
 	url: 'movie/',
+	cast: null,
+	overview: '',
 	init: function(){
 	},
 	isFavorite: false,
@@ -78,7 +80,12 @@ App.views.DetailView = App.Presenter.mixin({
 	className: 'white-box panel',
 	init: function(){
 		this.template = _.template($('#movie-popup').html());
-		this.model.on('change:isFavorite', this.render.bind(this));
+		this.model.on('change:isFavorite', this.toggleFavorite.bind(this));
+	},
+
+	toggleFavorite: function(){
+		this.$('.fav').toggleClass('btn-primary', !this.model.isFavorite);
+		this.$('.fav').toggleClass('btn-danger', this.model.isFavorite);
 	},
 
 	render: function(){
